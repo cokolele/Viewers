@@ -111,7 +111,7 @@ function modeFactory({ modeConfiguration }) {
       return {
         valid:
           modalitiesArray.length === 1
-            ? !['SM', 'US', 'MG', 'OT', 'DOC', 'CR'].includes(modalitiesArray[0])
+            ? !['SM', 'MG', 'OT', 'DOC', 'CR'].includes(modalitiesArray[0])
             : true,
         description:
           'The mode does not support studies that ONLY include the following modalities: SM, US, MG, OT, DOC, CR',
