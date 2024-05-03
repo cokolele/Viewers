@@ -36,6 +36,7 @@ import { showLabelAnnotationPopup } from './utils/callInputDialog';
 import ViewportActionCornersService from './services/ViewportActionCornersService/ViewportActionCornersService';
 import { ViewportActionCornersProvider } from './contextProviders/ViewportActionCornersProvider';
 import ActiveViewportWindowLevel from './components/ActiveViewportWindowLevel';
+import OverlaySidepanel from './components/OverlaySidepanel';
 
 const { helpers: volumeLoaderHelpers } = csStreamingImageVolumeLoader;
 const { getDynamicVolumeInfo } = volumeLoaderHelpers ?? {};
@@ -116,13 +117,24 @@ const cornerstoneExtension: Types.Extensions.Extension = {
   },
 
   getToolbarModule,
-  getPanelModule({ servicesManager }) {
+  getPanelModule({
+    commandsManager,
+    extensionManager,
+    servicesManager,
+  }) {
     return [
       {
         name: 'activeViewportWindowLevel',
         component: () => {
           return <ActiveViewportWindowLevel servicesManager={servicesManager} />;
         },
+      },
+      {
+        name: 'test',
+        iconName: 'toggle-dicom-overlay',
+        iconLabel: 'ROIs',
+        label: 'ROIs',
+        component: () => <OverlaySidepanel servicesManager={servicesManager} />
       },
     ];
   },

@@ -101,8 +101,15 @@ class ImageOverlayViewerTool extends AnnotationDisplayTool {
    * @returns
    */
   private _renderOverlay(enabledElement, svgDrawingHelper, overlayData) {
+    if (window.overlaysState && window.overlaysState[overlayData.label]) {
+      const overlayState = window.overlaysState[overlayData.label];
+
+      if (!overlayState.show) {
+        return;
+      }
+    }
+
     const { viewport } = enabledElement;
-    const { currentImageIdIndex } = viewport;
 
     const imageId = this.getReferencedImageId(viewport);
     if (!imageId) {
@@ -190,7 +197,7 @@ class ImageOverlayViewerTool extends AnnotationDisplayTool {
 
           const dataUrl = this._renderOverlayToDataUrl(
             { width: overlay.columns, height: overlay.rows },
-            overlay.color || color,
+            overlay.roiColor || color,
             pixelData,
             currentImageIdIndex
           );

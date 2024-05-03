@@ -182,7 +182,7 @@ function modeFactory({ modeConfiguration }) {
             id: ohif.layout,
             props: {
               leftPanels: [tracked.thumbnailList],
-              rightPanels: [dicomSeg.panel, tracked.measurements],
+              rightPanels: [dicomSeg.panel, tracked.measurements, '@ohif/extension-cornerstone.panelModule.test'],
               rightPanelClosed: true,
               viewports: [
                 {

@@ -297,6 +297,7 @@ class MetadataProvider {
           const ROIAreaTag = `${groupStr}1301`;
           const ROIMeanTag = `${groupStr}1302`;
           const ROIStandardDeviationTag = `${groupStr}1303`;
+          const ROIColor = `${groupStr}1304`;
           const OverlayOrigin = instance[OverlayOriginTag];
 
           let rows = 0;
@@ -341,6 +342,7 @@ class MetadataProvider {
             roiArea: instance[ROIAreaTag],
             roiMean: instance[ROIMeanTag],
             roiStandardDeviation: instance[ROIStandardDeviationTag],
+            roiColor: instance[ROIColor]
           };
 
           overlays.push(overlay);
