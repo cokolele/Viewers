@@ -101,6 +101,8 @@ class ImageOverlayViewerTool extends AnnotationDisplayTool {
    */
   private _renderOverlay(enabledElement, svgDrawingHelper, overlayData) {
     const { viewport } = enabledElement;
+    const { currentImageIdIndex } = viewport;
+
     const imageId = this.getReferencedImageId(viewport);
     if (!imageId) {
       return;
@@ -127,7 +129,7 @@ class ImageOverlayViewerTool extends AnnotationDisplayTool {
       height: overlayBottomRightOnCanvas[1] - overlayTopLeftOnCanvas[1],
       x: overlayTopLeftOnCanvas[0],
       y: overlayTopLeftOnCanvas[1],
-      href: overlayData.dataUrl,
+      href: overlayData.dataUrl[currentImageIdIndex],
     };
 
     if (
@@ -232,37 +234,46 @@ class ImageOverlayViewerTool extends AnnotationDisplayTool {
    */
   private _renderOverlayToDataUrl({ width, height }, color, pixelDataRaw) {
     const pixelDataView = new DataView(pixelDataRaw);
-    const totalBits = width * height;
+    const totalBitsCount = pixelDataView.byteLength * 8;
+    const frameBitsCount = width * height;
+    const framesCount = totalBitsCount / frameBitsCount;
 
     const canvas = document.createElement('canvas');
     canvas.width = width;
     canvas.height = height;
 
     const ctx = canvas.getContext('2d');
-    ctx.clearRect(0, 0, width, height); // make it transparent
-    ctx.globalCompositeOperation = 'copy';
 
-    const imageData = ctx.getImageData(0, 0, width, height);
-    const data = imageData.data;
-    for (let i = 0, bitIdx = 0, byteIdx = 0; i < totalBits; i++) {
-      if (pixelDataView.getUint8(byteIdx) & (1 << bitIdx)) {
-        data[i * 4] = color[0];
-        data[i * 4 + 1] = color[1];
-        data[i * 4 + 2] = color[2];
-        data[i * 4 + 3] = color[3];
-      }
+    let dataUrl = [];
 
-      // next bit, byte
-      if (bitIdx >= 7) {
-        bitIdx = 0;
-        byteIdx++;
-      } else {
-        bitIdx++;
+    for (let i = 0, bitIdx = 0, byteIdx = 0; i < framesCount; i++) {
+      ctx.clearRect(0, 0, width, height); // make it transparent
+      ctx.globalCompositeOperation = 'copy';
+
+      const imageData = ctx.getImageData(0, 0, width, height);
+      const data = imageData.data;
+      for (let j = 0; j < frameBitsCount; j++) {
+        if (pixelDataView.getUint8(byteIdx) & (1 << bitIdx)) {
+          data[j * 4] = color[0];
+          data[j * 4 + 1] = color[1];
+          data[j * 4 + 2] = color[2];
+          data[j * 4 + 3] = color[3];
+        }
+
+        // next bit, byte
+        if (bitIdx >= 7) {
+          bitIdx = 0;
+          byteIdx++;
+        } else {
+          bitIdx++;
+        }
       }
+      ctx.putImageData(imageData, 0, 0);
+
+      dataUrl[i] = canvas.toDataURL();
     }
-    ctx.putImageData(imageData, 0, 0);
 
-    return canvas.toDataURL();
+    return dataUrl;
   }
 }
 
