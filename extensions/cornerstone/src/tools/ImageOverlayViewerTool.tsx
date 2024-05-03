@@ -59,6 +59,7 @@ class ImageOverlayViewerTool extends AnnotationDisplayTool {
 
   renderAnnotation = (enabledElement, svgDrawingHelper) => {
     const { viewport } = enabledElement;
+    const { currentImageIdIndex } = viewport;
 
     const imageId = this.getReferencedImageId(viewport);
     if (!imageId) {
@@ -82,7 +83,7 @@ class ImageOverlayViewerTool extends AnnotationDisplayTool {
     // Will clear cached stat data when the overlay data changes
     ImageOverlayViewerTool.addOverlayPlaneModule(imageId, overlayMetadata);
 
-    this._getCachedStat(imageId, overlayMetadata, this.configuration.fillColor).then(cachedStat => {
+    this._getCachedStat(imageId, overlayMetadata, this.configuration.fillColor, currentImageIdIndex).then(cachedStat => {
       cachedStat.overlays.forEach(overlay => {
         this._renderOverlay(enabledElement, svgDrawingHelper, overlay);
       });
@@ -129,7 +130,7 @@ class ImageOverlayViewerTool extends AnnotationDisplayTool {
       height: overlayBottomRightOnCanvas[1] - overlayTopLeftOnCanvas[1],
       x: overlayTopLeftOnCanvas[0],
       y: overlayTopLeftOnCanvas[1],
-      href: overlayData.dataUrl[currentImageIdIndex],
+      href: overlayData.dataUrl,
     };
 
     if (
@@ -156,7 +157,8 @@ class ImageOverlayViewerTool extends AnnotationDisplayTool {
   private async _getCachedStat(
     imageId: string,
     overlayMetadata,
-    color: number[]
+    color: number[],
+    currentImageIdIndex: number
   ): Promise<CachedStat> {
     const missingOverlay = overlayMetadata.overlays.filter(
       overlay => overlay.pixelData && !overlay.dataUrl
@@ -189,7 +191,8 @@ class ImageOverlayViewerTool extends AnnotationDisplayTool {
           const dataUrl = this._renderOverlayToDataUrl(
             { width: overlay.columns, height: overlay.rows },
             overlay.color || color,
-            pixelData
+            pixelData,
+            currentImageIdIndex
           );
 
           return {
@@ -228,15 +231,22 @@ class ImageOverlayViewerTool extends AnnotationDisplayTool {
    * to each of the underlying pixels of the image.
    * Let's create pixel data from bit array of overlay data
    *
+   * @param width
+   * @param height
    * @param pixelDataRaw
    * @param color
+   * @param currentImageIdIndex
    * @returns
    */
-  private _renderOverlayToDataUrl({ width, height }, color, pixelDataRaw) {
-    const pixelDataView = new DataView(pixelDataRaw);
-    const totalBitsCount = pixelDataView.byteLength * 8;
+  private _renderOverlayToDataUrl({ width, height }, color, pixelDataRaw, currentImageIdIndex: number) {
     const frameBitsCount = width * height;
-    const framesCount = totalBitsCount / frameBitsCount;
+    const frameBitsOffset= frameBitsCount * currentImageIdIndex
+
+    const pixelDataView = new DataView(
+      pixelDataRaw,
+      Math.floor(frameBitsOffset / 8),
+      Math.ceil(frameBitsCount / 8)
+    );
 
     const canvas = document.createElement('canvas');
     canvas.width = width;
@@ -244,36 +254,30 @@ class ImageOverlayViewerTool extends AnnotationDisplayTool {
 
     const ctx = canvas.getContext('2d');
 
-    let dataUrl = [];
+    ctx.clearRect(0, 0, width, height); // make it transparent
+    ctx.globalCompositeOperation = 'copy';
 
-    for (let i = 0, bitIdx = 0, byteIdx = 0; i < framesCount; i++) {
-      ctx.clearRect(0, 0, width, height); // make it transparent
-      ctx.globalCompositeOperation = 'copy';
-
-      const imageData = ctx.getImageData(0, 0, width, height);
-      const data = imageData.data;
-      for (let j = 0; j < frameBitsCount; j++) {
-        if (pixelDataView.getUint8(byteIdx) & (1 << bitIdx)) {
-          data[j * 4] = color[0];
-          data[j * 4 + 1] = color[1];
-          data[j * 4 + 2] = color[2];
-          data[j * 4 + 3] = color[3];
-        }
-
-        // next bit, byte
-        if (bitIdx >= 7) {
-          bitIdx = 0;
-          byteIdx++;
-        } else {
-          bitIdx++;
-        }
+    const imageData = ctx.getImageData(0, 0, width, height);
+    const data = imageData.data;
+    for (let i = 0, bitIdx = frameBitsOffset % 8, byteIdx = 0; i < frameBitsCount; i++) {
+      if (pixelDataView.getUint8(byteIdx) & (1 << bitIdx)) {
+        data[i * 4] = color[0];
+        data[i * 4 + 1] = color[1];
+        data[i * 4 + 2] = color[2];
+        data[i * 4 + 3] = color[3];
       }
-      ctx.putImageData(imageData, 0, 0);
 
-      dataUrl[i] = canvas.toDataURL();
+      // next bit, byte
+      if (bitIdx >= 7) {
+        bitIdx = 0;
+        byteIdx++;
+      } else {
+        bitIdx++;
+      }
     }
+    ctx.putImageData(imageData, 0, 0);
 
-    return dataUrl;
+    return canvas.toDataURL();
   }
 }
 
