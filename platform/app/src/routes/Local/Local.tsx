@@ -82,7 +82,7 @@ function Local({ modePath }: LocalProps) {
         formData.append('files', file);
       });
 
-      const url = 'http://localhost:8000/' + isPng ? 'upload-image' : 'upload-npy'
+      const url = 'http://localhost:8000/' + (isPng ? 'upload-image' : 'upload-npy')
       const response = await fetch(url, {
         method: 'POST',
         body: formData,
