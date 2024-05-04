@@ -8,7 +8,7 @@ import filesToStudies from './filesToStudies';
 
 import { extensionManager } from '../../App.tsx';
 
-import { Button, Icon, LoadingIndicatorProgress } from '@ohif/ui';
+import { Icon, Button, LoadingIndicatorProgress } from '@ohif/ui';
 
 const getLoadButton = (onDrop, text, isDir, fileType) => {
   return (
@@ -72,6 +72,31 @@ function Local({ modePath }: LocalProps) {
   );
 
   const onDrop = async acceptedFiles => {
+    let isNpy = acceptedFiles.every(file => file.name.endsWith('.npy'))
+    let isPng = acceptedFiles.every(file => file.name.endsWith('.png'))
+
+    if (isNpy || isPng) {
+      const formData = new FormData();
+
+      acceptedFiles.forEach((file: string | Blob) => {
+        formData.append('files', file);
+      });
+
+      const url = 'http://localhost:8000/' + isPng ? 'upload-image' : 'upload-npy'
+      const response = await fetch(url, {
+        method: 'POST',
+        body: formData,
+      })
+
+      if (!response.ok) {
+        throw new Error('Failed to upload file');
+      }
+
+      const data = await response.arrayBuffer();
+      const blob = new Blob([data], { type: 'application/dicom' });
+      acceptedFiles = [new File([blob], 'test1.dcm', { type: 'application/dicom' })]
+    }
+
     const studies = await filesToStudies(acceptedFiles, dataSource);
 
     const query = new URLSearchParams();
@@ -109,59 +134,6 @@ function Local({ modePath }: LocalProps) {
     };
   }, []);
 
-  function bytesToDICOMFile(bytes: ArrayBuffer): File {
-    const blob = new Blob([bytes], { type: 'application/dicom' });
-    return new File([blob], 'test1.dcm', { type: 'application/dicom' });
-  }
-
-  const handleImageUpload = async acceptedFiles => {
-    const formData = new FormData();
-
-    acceptedFiles.forEach((file: string | Blob) => {
-      formData.append('files', file);
-    });
-
-    fetch('http://localhost:8000/upload-image', {
-      method: 'POST',
-      body: formData,
-    })
-      .then(async response => {
-        if (!response.ok) {
-          throw new Error('Failed to upload file');
-        }
-        const data = await response.arrayBuffer();
-        const dicomFile = bytesToDICOMFile(data);
-        await onDrop([dicomFile]);
-      })
-      .catch(error => {
-        console.error('Error uploading file:', error);
-      });
-  };
-
-  const handleNPYUpload = async acceptedFiles => {
-    const formData = new FormData();
-
-    acceptedFiles.forEach((file: string | Blob) => {
-      formData.append('files', file);
-    });
-
-    fetch('http://localhost:8000/upload-npy', {
-      method: 'POST',
-      body: formData,
-    })
-      .then(async response => {
-        if (!response.ok) {
-          throw new Error('Failed to upload file');
-        }
-        const data = await response.arrayBuffer();
-        const dicomFile = bytesToDICOMFile(data);
-        await onDrop([dicomFile]);
-      })
-      .catch(error => {
-        console.error('Error uploading file:', error);
-      });
-  };
-
   return (
     <Dropzone
       ref={dropzoneRef}
@@ -178,12 +150,11 @@ function Local({ modePath }: LocalProps) {
         >
           <div className="flex h-screen w-screen items-center justify-center ">
             <div className="bg-secondary-dark mx-auto space-y-2 rounded-lg py-8 px-8 drop-shadow-md">
-              <div className="flex items-center justify-center">
-                <Icon
-                  name="logo-dark-background"
-                  className="h-28"
-                />
-              </div>
+              <img
+                className="mx-auto block h-14"
+                src="./ohif-logo.svg"
+                alt="OHIF"
+              />
               <div className="space-y-2 pt-4 text-center">
                 {dropInitiated ? (
                   <div className="flex flex-col items-center justify-center pt-48">
@@ -202,11 +173,13 @@ function Local({ modePath }: LocalProps) {
                   </div>
                 )}
               </div>
-              <div className="flex justify-around pt-4 ">
+              <div className="flex justify-around pt-4 items-center">
                 {getLoadButton(onDrop, 'Load files', false, null)}
                 {getLoadButton(onDrop, 'Load folders', true, null)}
-                {getLoadButton(handleImageUpload, 'Load images', false, 'image/png')}
-                {getLoadButton(handleNPYUpload, 'Load npy files', false, '.npy')}
+                <div className="flex justify-around rounded-lg border border-blue-300 border-dashed py-2 pr-2 mx-3">
+                  {getLoadButton(onDrop, 'Segmentovať obrázky', false, 'image/png')}
+                  {getLoadButton(onDrop, 'Načítať segmentácie', false, '.npy')}
+                </div>
               </div>
             </div>
           </div>
