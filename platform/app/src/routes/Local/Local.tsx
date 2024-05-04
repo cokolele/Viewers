@@ -76,6 +76,7 @@ function Local({ modePath }: LocalProps) {
     let isPng = acceptedFiles.every(file => file.name.endsWith('.png'))
 
     if (isNpy || isPng) {
+      setDropInitiated(true);
       const formData = new FormData();
 
       acceptedFiles.forEach((file: string | Blob) => {
@@ -177,7 +178,7 @@ function Local({ modePath }: LocalProps) {
                 {getLoadButton(onDrop, 'Load files', false, null)}
                 {getLoadButton(onDrop, 'Load folders', true, null)}
                 <div className="flex justify-around rounded-lg border border-blue-300 border-dashed py-2 pr-2 mx-3">
-                  {getLoadButton(onDrop, 'Segmentovať obrázky', false, 'image/png')}
+                  {getLoadButton(onDrop, 'Predikovať obrázok', false, 'image/png')}
                   {getLoadButton(onDrop, 'Načítať segmentácie', false, '.npy')}
                 </div>
               </div>
